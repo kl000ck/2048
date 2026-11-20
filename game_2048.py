@@ -356,6 +356,35 @@ def save_best(score):
 # Ввод с клавиатуры
 # ---------------------------------------------------------------------------
 
+def enable_windows_console():
+    """Включает ANSI-цвета и UTF-8 в консоли Windows."""
+    if os.name != "nt":
+        return
+    try:
+        import ctypes
+
+        kernel32 = ctypes.windll.kernel32
+        kernel32.GetStdHandle.argtypes = [ctypes.c_uint32]
+        kernel32.GetStdHandle.restype = ctypes.c_void_p
+        kernel32.GetConsoleMode.argtypes = [
+            ctypes.c_void_p,
+            ctypes.POINTER(ctypes.c_uint32),
+        ]
+        kernel32.GetConsoleMode.restype = ctypes.c_int
+        kernel32.SetConsoleMode.argtypes = [ctypes.c_void_p, ctypes.c_uint32]
+        kernel32.SetConsoleMode.restype = ctypes.c_int
+
+        for handle_id in (-11, -12):  # STD_OUTPUT_HANDLE, STD_ERROR_HANDLE
+            handle = kernel32.GetStdHandle(handle_id)
+            mode = ctypes.c_uint32()
+            if kernel32.GetConsoleMode(handle, ctypes.byref(mode)):
+                kernel32.SetConsoleMode(handle, mode.value | 0x0004)
+
+        kernel32.SetConsoleTitleW("2048")
+    except Exception:
+        pass
+
+
 _TERMINAL_STATE = None
 _ARROWS = {"[A": "up", "[B": "down", "[C": "right", "[D": "left"}
 _WINDOWS_ARROWS = {"H": "up", "P": "down", "K": "left", "M": "right"}
@@ -482,6 +511,8 @@ def main():
         print("Запустите игру в интерактивном терминале:")
         print("    python3 game_2048.py")
         return 1
+
+    enable_windows_console()
 
     try:
         terminal_enter()

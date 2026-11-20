@@ -1,0 +1,42 @@
+#!/bin/sh
+# Запускает игру в текущем терминале, а при запуске из файлового менеджера
+# открывает для неё новое окно терминала.
+set -u
+
+HERE="${APPDIR:-$(dirname "$(readlink -f "$0")")}"
+GAME="$HERE/usr/bin/2048"
+
+if [ ! -x "$GAME" ]; then
+    echo "Не найден исполняемый файл игры: $GAME" >&2
+    exit 1
+fi
+
+# Уже запущено из терминала — просто стартуем игру.
+if [ -t 0 ] && [ -t 1 ]; then
+    exec "$GAME"
+fi
+
+# Пробуем терминал, указанный пользователем.
+if [ -n "${TERMINAL:-}" ] && command -v "$TERMINAL" >/dev/null 2>&1; then
+    case "$(basename "$TERMINAL")" in
+        kitty) exec "$TERMINAL" "$GAME" ;;
+        *)     exec "$TERMINAL" -e "$GAME" ;;
+    esac
+fi
+
+for term in x-terminal-emulator gnome-terminal konsole xfce4-terminal \
+            alacritty kitty xterm; do
+    command -v "$term" >/dev/null 2>&1 || continue
+
+    case "$term" in
+        gnome-terminal) exec "$term" -- "$GAME" ;;
+        xfce4-terminal) exec "$term" -x "$GAME" ;;
+        kitty)          exec "$term" "$GAME" ;;
+        *)              exec "$term" -e "$GAME" ;;
+    esac
+done
+
+echo "Не удалось найти эмулятор терминала." >&2
+echo "Запустите игру из терминала командой:" >&2
+echo "    $GAME" >&2
+exit 1
